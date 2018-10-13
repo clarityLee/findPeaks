@@ -5,6 +5,7 @@
 #include <chrono>
 using namespace std;
 
+inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, const short columns);
 inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs);
 inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs);
 inline void FindPeaksInLastRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs);
@@ -28,26 +29,38 @@ int main(int argc, char* argv[]) {
     }
 
     // Step 2.1 Read in the first 2 numbers : rows, columns.
+    auto s2start = std::chrono::high_resolution_clock::now();
     short rows, columns;
     readInFile >> rows;
     readInFile >> columns;
+
+      // get rid of \n after first line.
+    char bufForFist[1];
+    readInFile.read(bufForFist, sizeof(bufForFist));
 
     // Step 2.2 Create a matrix and read in the rest of the files into matrix.
     int** matrix = new int*[rows];
     for (short i = 0 ; i < rows ; ++i) {
         matrix[i] = new int[columns];
-        for (short j = 0 ; j < columns ; ++j) {
-            readInFile >> matrix[i][j];
-        }
     }
+    ReadInFile(readInFile, matrix, rows, columns);
+    auto s2end = std::chrono::high_resolution_clock::now();
+    chrono::duration<double> s2elapsed = s2end - s2start;
+    cout << "step2: read matrix from file memory: " << s2elapsed.count() << " s." << '\n';
 
     // Step 3. find peaks in the matrix
+    auto s3start = std::chrono::high_resolution_clock::now();
     std::vector<short> peakIJs; // This is the vector that stores peak i,j
     FindPeaksInFirstRow(matrix, rows, columns, peakIJs);
     if (rows > 2) FindPeaksInMiddleRow(matrix, rows, columns, peakIJs);
     if (rows > 1) FindPeaksInLastRow(matrix, rows, columns, peakIJs);
+    auto s3end = std::chrono::high_resolution_clock::now();
+    chrono::duration<double> s3elapsed = s3end - s3start;
+    cout << "step3: find out peaks and save results in memory: " << s3elapsed.count() << " s." << '\n';
+    
 
     // Step 4. output results to final.peak
+    auto s4start = std::chrono::high_resolution_clock::now();
     string output_pathAndName(argv[1]);
     output_pathAndName += "/final.peak";
     ofstream outputFile(output_pathAndName);
@@ -57,6 +70,10 @@ int main(int argc, char* argv[]) {
         outputFile << peakIJs[i++] << ' ' << peakIJs[i++] << '\n';
     outputFile << peakIJs[i++] << ' ' << peakIJs[i];
 
+    auto s4end = std::chrono::high_resolution_clock::now();
+    chrono::duration<double> s4elapsed = s4end - s4start;
+    cout << "step4: Save peak result in to file final.peak : " << s4elapsed.count() << " s." << '\n';
+
     // de-allocate memory
     for (short i = 0 ; i < rows ; ++i)
         delete[] matrix[i];
@@ -64,10 +81,70 @@ int main(int argc, char* argv[]) {
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    cout << "total used time : " << elapsed.count() << " seconds.";
+    cout << "Total used time : " << elapsed.count() << " seconds." << '\n';
 
     return 0;
 }
+
+inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, const short columns) {
+    int lc = 0;
+    int item = 0;
+
+    char buf[2048];
+    short pi = 0, pj = 0, total = rows * columns;
+    bool hasMinusSign = false;
+    
+    short loopCount = 0;
+    do
+    {
+        loopCount++;
+        readInFile.read(buf, sizeof(buf));
+        int k = readInFile.gcount();
+        
+        for (int i = 0; i < k; ++i)
+        {
+            
+            switch (buf[i])
+            {
+                case '-':
+                    hasMinusSign = true;
+                    break;
+                case '\r':
+                    break;
+                case '\n':
+                    if (hasMinusSign) item = -item;
+                    hasMinusSign = false;
+                    matrix[pi][pj++] = item;
+                    if (pj == columns) {
+                        pj = 0;
+                        ++pi;
+                    }
+                    lc++; item = 0;
+                    break;
+                case ' ':
+                    if (hasMinusSign) item = -item;
+                    hasMinusSign = false;
+                    matrix[pi][pj++] = item;
+                    if (pj == columns) {
+                        pj = 0;
+                        ++pi;
+                    }
+                    lc++; item = 0;
+                    break;
+                case '0': case '1': case '2': case '3':
+                case '4': case '5': case '6': case '7':
+                case '8': case '9':
+                    item = 10*item + buf[i] - '0';
+                    break;
+                default:
+                    std::cerr << "Bad format\n";
+            }
+
+            
+        }
+        if (lc == total) break;
+    } while (!readInFile.eof());
+};
 
 inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs) {
 
