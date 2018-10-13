@@ -7,4 +7,4 @@ The complied exectuable file should be executed as:
 ./output input_student_id
 where input_student_id should be a folder name and contains "matrix.data".
 
-The project will output result as "final.peak".
+The project will output result to a file "final.peak" in the same directory to matrix.data.
