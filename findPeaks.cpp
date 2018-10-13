@@ -93,54 +93,38 @@ inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, co
     char buf[2048];
     short pi = 0, pj = 0, total = rows * columns;
     bool hasMinusSign = false;
+    bool isPreviousNumber = false;
     
-    short loopCount = 0;
     do
     {
-        loopCount++;
         readInFile.read(buf, sizeof(buf));
         int k = readInFile.gcount();
-        
         for (int i = 0; i < k; ++i)
         {
-            
             switch (buf[i])
             {
                 case '-':
                     hasMinusSign = true;
                     break;
-                case '\r':
-                    break;
-                case '\n':
-                    if (hasMinusSign) item = -item;
-                    hasMinusSign = false;
-                    matrix[pi][pj++] = item;
-                    if (pj == columns) {
-                        pj = 0;
-                        ++pi;
-                    }
-                    lc++; item = 0;
-                    break;
-                case ' ':
-                    if (hasMinusSign) item = -item;
-                    hasMinusSign = false;
-                    matrix[pi][pj++] = item;
-                    if (pj == columns) {
-                        pj = 0;
-                        ++pi;
-                    }
-                    lc++; item = 0;
-                    break;
                 case '0': case '1': case '2': case '3':
                 case '4': case '5': case '6': case '7':
                 case '8': case '9':
                     item = 10*item + buf[i] - '0';
+                    isPreviousNumber = true;
                     break;
                 default:
-                    std::cerr << "Bad format\n";
+                    if (!isPreviousNumber) break;
+                    isPreviousNumber = false;
+                    if (hasMinusSign) item = -item;
+                    hasMinusSign = false;
+                    matrix[pi][pj++] = item;
+                    if (pj == columns) {
+                        pj = 0;
+                        ++pi;
+                    }
+                    lc++; item = 0;
+                    break;
             }
-
-            
         }
         if (lc == total) break;
     } while (!readInFile.eof());
