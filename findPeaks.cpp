@@ -1,87 +1,78 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
 #include <chrono>
+#include <sstream>
 using namespace std;
 
+constexpr auto &&now = std::chrono::high_resolution_clock::now;
 inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, const short columns);
-inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs);
-inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs);
-inline void FindPeaksInLastRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs);
+inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short columns, int &count, stringstream &ss);
+inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short columns, int &count, stringstream &ss);
+inline void FindPeaksInLastRow(int** &matrix, const short rows, const short columns, int &count, stringstream &ss);
 
 int main(int argc, char* argv[]) {
 
-    auto start = std::chrono::high_resolution_clock::now();
+    auto programStartTime = now();
 
     // Step 1. Open file
     if (argc < 2) {
-        cout << "Error: please specify the path to matrix.data!" << '\n';
+        cout << "Error: missing argument! Please specify the path to matrix.data!" << '\n';
         return 1;
     }
-    string sourceData_pathAndName(argv[1]);
-    sourceData_pathAndName += "/matrix.data";
-    
-    ifstream readInFile(sourceData_pathAndName);
+    ifstream readInFile(string(argv[1]) + "/matrix.data");
     if (!readInFile.is_open()) {
-        cout << "Error: unable to open " << sourceData_pathAndName << '\n';
+        cout << "Error: unable to open " << argv[1] << "/matrix.data , please check out the existence of file." << '\n';
         return 1;
     }
+    stringstream coutMessage; coutMessage << "step1: open file successfully." << endl;
 
     // Step 2.1 Read in the first 2 numbers : rows, columns.
-    auto s2start = std::chrono::high_resolution_clock::now();
+    auto phaseStartTime = now();
     short rows, columns;
-    readInFile >> rows;
-    readInFile >> columns;
+    readInFile >> rows; readInFile >> columns;
 
-      // get rid of \n after first line.
-    char bufForFist[1];
-    readInFile.read(bufForFist, sizeof(bufForFist));
+    // clear the first '\n' in the filestream, which is at the end of first line.
+    char bufForFist[1]; readInFile.read(bufForFist, sizeof(bufForFist));
 
-    // Step 2.2 Create a matrix and read in the rest of the files into matrix.
+    // Step 2.2 Create a matrix and read the rest of the files into matrix.
     int** matrix = new int*[rows];
     for (short i = 0 ; i < rows ; ++i) {
         matrix[i] = new int[columns];
     }
     ReadInFile(readInFile, matrix, rows, columns);
-    auto s2end = std::chrono::high_resolution_clock::now();
-    chrono::duration<double> s2elapsed = s2end - s2start;
-    cout << "step2: read matrix from file memory: " << s2elapsed.count() << " s." << '\n';
+
+    chrono::duration<double> elapsed = now() - phaseStartTime;
+    coutMessage << "step2: " << elapsed.count() * 1000 << " ms, read from file and create matrix in memory." << endl;
 
     // Step 3. find peaks in the matrix
-    auto s3start = std::chrono::high_resolution_clock::now();
-    std::vector<short> peakIJs; // This is the vector that stores peak i,j
-    FindPeaksInFirstRow(matrix, rows, columns, peakIJs);
-    if (rows > 2) FindPeaksInMiddleRow(matrix, rows, columns, peakIJs);
-    if (rows > 1) FindPeaksInLastRow(matrix, rows, columns, peakIJs);
-    auto s3end = std::chrono::high_resolution_clock::now();
-    chrono::duration<double> s3elapsed = s3end - s3start;
-    cout << "step3: find out peaks and save results in memory: " << s3elapsed.count() << " s." << '\n';
+    phaseStartTime = now();
+
+    stringstream ss;
+    int count = 0;
+    FindPeaksInFirstRow(matrix, rows, columns, count, ss);
+    if (rows > 2) FindPeaksInMiddleRow(matrix, rows, columns, count, ss);
+    if (rows > 1) FindPeaksInLastRow(matrix, rows, columns, count, ss);
+
+    elapsed = now() - phaseStartTime;
+    coutMessage << "step3: " << elapsed.count() * 1000 << " ms, find peaks and save results in memory." << endl;
     
-
     // Step 4. output results to final.peak
-    auto s4start = std::chrono::high_resolution_clock::now();
-    string output_pathAndName(argv[1]);
-    output_pathAndName += "/final.peak";
-    ofstream outputFile(output_pathAndName);
-    outputFile << peakIJs.size()/2 << '\n';
-    int i = 0;
-    while (i < peakIJs.size() - 2)
-        outputFile << peakIJs[i++] << ' ' << peakIJs[i++] << '\n';
-    outputFile << peakIJs[i++] << ' ' << peakIJs[i];
+    phaseStartTime = now();
 
-    auto s4end = std::chrono::high_resolution_clock::now();
-    chrono::duration<double> s4elapsed = s4end - s4start;
-    cout << "step4: Save peak result in to file final.peak : " << s4elapsed.count() << " s." << '\n';
+    ofstream outputFile(string(argv[1]) + "/final.peak");
+    outputFile << count << ss.rdbuf();
+
+    elapsed = now() - phaseStartTime;
+    coutMessage << "step4: " << elapsed.count() * 1000 << " ms, output results to the file 'final.peak'." << endl;
 
     // de-allocate memory
-    for (short i = 0 ; i < rows ; ++i)
-        delete[] matrix[i];
+    for (short i = 0 ; i < rows ; ++i) delete[] matrix[i];
     delete [] matrix;
 
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    cout << "Total used time : " << elapsed.count() << " seconds." << '\n';
+    elapsed = now() - programStartTime;
+    coutMessage << "Total used time : " << elapsed.count() * 1000 << " ms." << endl << endl;
+    cout << coutMessage.rdbuf();
 
     return 0;
 }
@@ -130,7 +121,7 @@ inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, co
     } while (!readInFile.eof());
 };
 
-inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs) {
+inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short columns, int &count, stringstream &ss) {
 
     const short i = 0, j0 = 0, j_end = columns - 1;
     short j;
@@ -139,8 +130,8 @@ inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short col
     if ((columns > 1 && matrix[i][j0] < matrix[i][j0+1]) ||
         (rows > 1 && matrix[i][j0] < matrix[i+1][j0])) {/* point is not peak, do nothing*/}
     else { // point is peak
-        peakIJs.push_back(i);
-        peakIJs.push_back(j0);
+        ss << endl << i << ' ' << j0;
+        ++count;
     }
 
     // 2. are middile points peak?
@@ -150,8 +141,8 @@ inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short col
                 if (matrix[i][j] < matrix[i][j-1] ||
                     matrix[i][j] < matrix[i][j+1]) {/* point is not peak, do nothing*/}
                 else { // point is peak
-                    peakIJs.push_back(i);
-                    peakIJs.push_back(j);
+                    ss << endl << i << ' ' << j;
+                    ++count;
                 }
             }
         } else { // if matrix contains multiple rows
@@ -160,8 +151,8 @@ inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short col
                     matrix[i][j] < matrix[i][j+1] ||
                     matrix[i][j] < matrix[i+1][j]) {/* point is not peak, do nothing*/}
                 else { // point is peak
-                    peakIJs.push_back(i);
-                    peakIJs.push_back(j);
+                    ss << endl << i << ' ' << j;
+                    ++count;
                 }
             }
         }
@@ -172,14 +163,14 @@ inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short col
         if (matrix[i][j_end] < matrix[i][j_end-1] ||
             (rows > 1 && matrix[i][j_end] < matrix[i+1][j_end])) {/* point is not peak, do nothing*/}
         else { // point is peak
-            peakIJs.push_back(i);
-            peakIJs.push_back(j_end);
+            ss << endl << i << ' ' << j_end;
+            ++count;
         }
     }
 };
 
 // used only when rows > 2
-inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs) {
+inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short columns, int &count, stringstream &ss) {
     if (rows < 3) throw "Error! This function: \"FindPeaksInMiddleRow\" can only be used when rows > 2";
 
     const short i_end = rows - 1, j0 = 0, j_end = columns - 1;
@@ -193,8 +184,8 @@ inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short co
             matrix[i][j0] < matrix[i+1][j0] ||
             (columns > 1 && matrix[i][j0] < matrix[i][j0+1])) {/* point is not peak, do nothing*/}
         else { // point is peak
-            peakIJs.push_back(i);
-            peakIJs.push_back(j0);
+            ss << endl << i << ' ' << j0;
+            ++count;
         }
 
         // 2. are middile points peak?
@@ -205,8 +196,8 @@ inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short co
                     matrix[i][j] < matrix[i-1][j] ||
                     matrix[i][j] < matrix[i+1][j]) {/* point is not peak, do nothing*/}
                 else { // point is peak
-                    peakIJs.push_back(i);
-                    peakIJs.push_back(j);
+                    ss << endl << i << ' ' << j;
+                    ++count;
                 }
             }
         }
@@ -217,15 +208,15 @@ inline void FindPeaksInMiddleRow(int** &matrix, const short rows, const short co
                 matrix[i][j_end] < matrix[i-1][j_end] ||
                 matrix[i][j_end] < matrix[i+1][j_end]) {/* point is not peak, do nothing*/}
             else { // point is peak
-                peakIJs.push_back(i);
-                peakIJs.push_back(j);
+                ss << endl << i << ' ' << j;
+                ++count;
             }
         }
     }
 };
 
 // used only when rows > 1
-inline void FindPeaksInLastRow(int** &matrix, const short rows, const short columns, vector<short> &peakIJs) {
+inline void FindPeaksInLastRow(int** &matrix, const short rows, const short columns, int &count, stringstream  &ss) {
 
     if (rows < 2) throw "Error! This function: \"FindPeaksInLastRow\" can only be used when rows > 1";
 
@@ -236,8 +227,8 @@ inline void FindPeaksInLastRow(int** &matrix, const short rows, const short colu
     if ((columns > 1 && matrix[i][j0] < matrix[i][j0+1]) ||
         matrix[i][j0] < matrix[i-1][j0]) {/* point is not peak, do nothing*/}
     else { // point is peak
-        peakIJs.push_back(i);
-        peakIJs.push_back(j0);
+        ss << endl << i << ' ' << j0;
+        ++count;
     }
 
     // 2. are middle points peak?
@@ -246,8 +237,8 @@ inline void FindPeaksInLastRow(int** &matrix, const short rows, const short colu
             matrix[i][j] < matrix[i][j+1] ||
             matrix[i][j] < matrix[i-1][j]) {/* point is not peak, do nothing*/}
         else { // point is peak
-            peakIJs.push_back(i);
-            peakIJs.push_back(j);
+            ss << endl << i << ' ' << j;
+            ++count;
         }
     }
 
@@ -256,8 +247,8 @@ inline void FindPeaksInLastRow(int** &matrix, const short rows, const short colu
         if (matrix[i][j_end] < matrix[i][j_end-1] ||
             matrix[i][j_end] < matrix[i-1][j_end]) {/* point is not peak, do nothing*/}
         else { // point is peak
-            peakIJs.push_back(i);
-            peakIJs.push_back(j_end);
+            ss << endl << i << ' ' << j_end;
+            ++count;
         }
     }
 };
