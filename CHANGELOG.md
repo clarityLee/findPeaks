@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.0.5 - 2018-10-14
+### Changed
+- Change the main buffer in memory for peak results from std::vector of Integer to std::stringstream,
+  and use stringstream::rdbuf() to write directly to ofstream.
+
 ## 0.0.4 - 2018-10-14
 ### Fixed
 - Improve reading ability on data source file by treating all none-number char as delimeter as space.
