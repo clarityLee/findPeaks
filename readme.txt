@@ -1,10 +1,12 @@
-This is a c++ project to find peaks in 2-D matrix file : matrix.data.
+This is a c++ program to find peaks in 2-D matrix file : matrix.data.
 
-The project should be compile using the command:
-g++ yourproject.cpp -o output
+Compile command:
+    g++ -std=c++11 findPeaks.cpp -o output(exectuable file)
 
-The complied exectuable file should be executed as:
-./output input_student_id
-where input_student_id should be a folder name and contains "matrix.data".
+Program execution command:
+    output(exectuable file) input_student_id
 
-The project will output result to a file "final.peak" in the same directory to matrix.data.
+    (input_student_id should be a folder which contains "matrix.data".)
+
+Execution output:
+    The result will be output to "final.peak" in the same directory of matrix.data.
