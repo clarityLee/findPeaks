@@ -90,7 +90,7 @@ inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, co
     {
         readInFile.read(buf, sizeof(buf));
         int k = readInFile.gcount();
-        for (int i = 0; i < k; ++i)
+        for (int i = 0; i < k && lc < total; ++i)
         {
             switch (buf[i])
             {
