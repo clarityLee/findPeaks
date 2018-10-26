@@ -82,12 +82,13 @@ inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, co
     int item = 0;
 
     char buf[2048];
-    short pi = 0, pj = 0, total = rows * columns;
+    short pi = 0, pj = 0;
+    int total = rows * columns;
     bool hasMinusSign = false;
     bool isPreviousNumber = false;
+    bool hasNumber = false;
     
-    do
-    {
+    do {
         readInFile.read(buf, sizeof(buf));
         int k = readInFile.gcount();
         for (int i = 0; i < k && lc < total; ++i)
@@ -101,24 +102,26 @@ inline void ReadInFile(ifstream &readInFile, int** &matrix, const short rows, co
                 case '4': case '5': case '6': case '7':
                 case '8': case '9':
                     item = 10*item + buf[i] - '0';
-                    isPreviousNumber = true;
+                    isPreviousNumber = true; hasNumber = true;
                     break;
                 default:
                     if (!isPreviousNumber) break;
-                    isPreviousNumber = false;
                     if (hasMinusSign) item = -item;
-                    hasMinusSign = false;
                     matrix[pi][pj++] = item;
-                    if (pj == columns) {
-                        pj = 0;
-                        ++pi;
-                    }
-                    lc++; item = 0;
+                    if (pj == columns) { ++pi; pj = 0; }
+                    lc++; item = 0; hasNumber = false; hasMinusSign = false; isPreviousNumber = false;
                     break;
             }
         }
         if (lc == total) break;
     } while (!readInFile.eof());
+
+    /* If the last character in the file is a number,
+       it will not have opportunity to be put in matrix in the previous switch case */
+    if (hasNumber) {
+        if (hasMinusSign) item = -item;
+        matrix[pi][pj] = item;
+    }
 };
 
 inline void FindPeaksInFirstRow(int** &matrix, const short rows, const short columns, int &count, stringstream &ss) {
@@ -232,13 +235,15 @@ inline void FindPeaksInLastRow(int** &matrix, const short rows, const short colu
     }
 
     // 2. are middle points peak?
-    for (j = 1 ; j < j_end ; ++j) {
-        if (matrix[i][j] < matrix[i][j-1] ||
-            matrix[i][j] < matrix[i][j+1] ||
-            matrix[i][j] < matrix[i-1][j]) {/* point is not peak, do nothing*/}
-        else { // point is peak
-            ss << endl << i << ' ' << j;
-            ++count;
+    if (columns > 2) {
+        for (j = 1 ; j < j_end ; ++j) {
+            if (matrix[i][j] < matrix[i][j-1] ||
+                matrix[i][j] < matrix[i][j+1] ||
+                matrix[i][j] < matrix[i-1][j]) {/* point is not peak, do nothing*/}
+            else { // point is peak
+                ss << endl << i << ' ' << j;
+                ++count;
+            }
         }
     }
 
